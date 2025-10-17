@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import curve_fit
 
-def fit_2d_gaussian_sym(data):
+def fit_2d_gaussian_sym(data, return_fit_data=False, initial_guess=None):
     """
     Fit a 2D symmetric Gaussian to the input data.
 
@@ -28,23 +28,41 @@ def fit_2d_gaussian_sym(data):
     y_indices, x_indices = np.indices(data.shape)
 
     # Initial guess for the parameters
-    initial_guess = (
-        np.max(data),  # amplitude
-        data.shape[1] / 2,  # xo
-        data.shape[0] / 2,  # yo
-        1.0,  # sigma
-        np.min(data)  # offset
-    )
+    if initial_guess is None:
+        initial_guess = (
+            np.max(data),  # amplitude
+            data.shape[1] / 2,  # xo
+            data.shape[0] / 2,  # yo
+            (data.shape[1] + data.shape[0]) / 20,  # sigma
+            np.min(data)  # offset
+        )
 
     # Fit the data
-    popt, pcov = curve_fit(
-        gaussian_2d_sym,
-        (x_indices, y_indices),
-        data.ravel(),
-        p0=initial_guess
-    )
+    try:
+        popt, pcov = curve_fit(
+            gaussian_2d_sym,
+            (x_indices, y_indices),
+            data.ravel(),
+            p0=initial_guess
+        )
+    except RuntimeError as e:
+        print(f"Error fitting data: {e}")
+        return None
+    
+    results = {
+        'amplitude': popt[0],
+        'xo': popt[1],
+        'yo': popt[2],
+        'sigma': popt[3],
+        'offset': popt[4],
+        'covariance': pcov
+    }
 
-    return popt, pcov
+    if return_fit_data:
+        fit_data = gaussian_2d_sym((x_indices, y_indices), *popt).reshape(data.shape)
+        results['fit_data'] = fit_data
+
+    return results
 
 
 if __name__ == "__main__":
@@ -56,31 +74,25 @@ if __name__ == "__main__":
     x = np.linspace(0, 100, 100)
     y = np.linspace(0, 100, 100)
     x, y = np.meshgrid(x, y)
-    data = 3 * np.exp(-(((x - 50) ** 2 + (y - 50) ** 2) / (2 * 5 ** 2))) + 10
-    data += 0.2 * np.random.normal(size=data.shape)
+    data = 3 * np.exp(-(((x - 20) ** 2 + (y - 70) ** 2) / (2 * 5 ** 2))) + 10
+    data += 0.01 * np.random.normal(size=data.shape)
 
     # Fit the data
-    popt, pcov = fit_2d_gaussian_sym(data)
+    results = fit_2d_gaussian_sym(data, return_fit_data=True, initial_guess=(4, 25, 65, 4, 9))
 
-    # compute area under the Gaussian
-    amplitude, xo, yo, sigma, offset = popt
-    area = 2 * np.pi * amplitude * sigma**2
 
-    # Print the results
-    print("Optimal parameters:", popt)
-    print("Estimated area under the Gaussian:", area)
 
-    # Plot the results
-    plt.imshow(data, extent=(0, 100, 0, 100), origin='lower')
-    plt.colorbar()
-    plt.title("Synthetic Data")
+    print("Fitted parameters:")
+    for key, value in results.items():
+        if key != 'fit_data' and key != 'covariance':
+            print(f"{key}: {value}")
 
-    # plot contours of the fitted Gaussian
-    x_indices, y_indices = np.indices(data.shape)
-    fitted_data = popt[4] + popt[0] * np.exp(
-        -(((x_indices - popt[1]) ** 2 + (y_indices - popt[2]) ** 2) / (2 * popt[3] ** 2))
-    )
-    plt.contour(x_indices, y_indices, fitted_data, colors='w')
+    # Plot original data and fit
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.title("Original Data")
+    plt.imshow(data, cmap='gist_ncar', origin='lower')
+    plt.contour(results['fit_data'], colors='w')
 
-    plt.savefig("synthetic_data.png")
-    print("Synthetic data plot saved as 'synthetic_data.png'")
+    plt.tight_layout()
+    plt.show()

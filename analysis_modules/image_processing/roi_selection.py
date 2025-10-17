@@ -4,10 +4,15 @@ import matplotlib.pyplot as plt
 # various tools for selecting ROIs in images
 
 # interactive ROI selection using matplotlib
-def select_roi_interactive(image):
+def select_roi_interactive(image, cmap='gray'):
     """
     Select a rectangular ROI interactively from the given image.
     The user selects the area using the default zoom tools, then presses Enter to confirm.
+
+    Args:
+        image (2D array): The input image from which to select the ROI.
+    Returns:
+        dict: A dictionary with keys 'x_start', 'x_end', 'y_start', 'y_end' defining the ROI.
     """
 
     fig, ax = plt.subplots()
@@ -22,8 +27,8 @@ def select_roi_interactive(image):
             ylim = ax.get_ylim()
             roi['x_start'] = int(xlim[0])
             roi['x_end'] = int(xlim[1])
-            roi['y_start'] = int(ylim[0])
-            roi['y_end'] = int(ylim[1])
+            roi['y_start'] = int(ylim[1])
+            roi['y_end'] = int(ylim[0])
             plt.close(fig)
 
     fig.canvas.mpl_connect('key_press_event', on_key)
