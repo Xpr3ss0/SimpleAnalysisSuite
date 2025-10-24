@@ -6,6 +6,9 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import pandas as pd
+from collections import defaultdict
+import configparser
 
 data_dir = "projects/electron_gun/data/17.10.2025/controlled_comparison/"
 
@@ -25,6 +28,10 @@ def on_button_press(event):
         plt.close()
 
 if __name__ == "__main__":
+
+    # read exposure from configs
+    exposure_times = {"pset1": 4.215000, "pset2": 1.590333, "pset3": 9.506667, "pset4": 3.368333}  # default values
+
 
     # crop all .bmp images in the data directory using interactive ROI selection
     for filename in os.listdir(data_dir):
@@ -57,6 +64,9 @@ if __name__ == "__main__":
             print(f"Finished cropping. {filename}\n")
 
     # fit all cropped images and print amplitude results
+
+    results = defaultdict(list)
+
     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(12, 10))
     for i, config_name in enumerate(config_names):
         for material in materials:
@@ -113,13 +123,23 @@ if __name__ == "__main__":
                     amplitudes.append(amplitude)
                     amp_errors.append(amp_error)
                     currents.append(current)
+
+                    results['material'].append(material)
+                    results['amplitude'].append(amplitude)
+                    results['amp_error'].append(amp_error)
+                    results['current_uA'].append(current)
+                    results['exposure'].append(exposure_times[config_name])
+                    results['config'].append(config_name)
             
             # plot amplitude vs current
             axs[i // 2, i % 2].errorbar(currents, amplitudes, yerr=amp_errors, xerr=0.05, fmt='o', label=material, capsize=5)
-            axs[i // 2, i % 2].set_title(f"Config: {config_name}")
+            axs[i // 2, i % 2].set_title(f"Exposure: {exposure_times[config_name]:.4f}ms")
             axs[i // 2, i % 2].set_xlabel(r"Current ($\mathrm{\mu A}$)")
             axs[i // 2, i % 2].set_ylabel("Amplitude (a.u.)")
             axs[i // 2, i % 2].legend()
 
+    df = pd.DataFrame(results)
+    print(df)
+    df.to_csv(os.path.join(data_dir, "fit_results.csv"), index=False)
     plt.tight_layout()
     plt.show()

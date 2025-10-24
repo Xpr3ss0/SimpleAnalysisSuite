@@ -209,3 +209,5 @@ __marimo__/
 
 # custom
 projects/electron_gun/data
+projects/electron_gun/plots
+projects/electron_gun/results
