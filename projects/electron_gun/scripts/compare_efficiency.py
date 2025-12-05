@@ -1,4 +1,4 @@
-from analysis_modules.fitting.standard import fit_2d_gaussian_sym
+from analysis_modules.fitting.gaussians import fit_2d_gaussian_sym
 from analysis_modules.image_processing.roi_selection import select_roi_interactive
 import os
 from PIL import Image
